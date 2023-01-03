@@ -36,7 +36,7 @@ def pre_lock_signal(
     project: Project,
     requirements: list[Requirement],
     dry_run: bool,
-    hooks: InteractiveHookManager,
+    hooks: HookManager,
 ) -> None:
     if not isinstance(hooks, InteractiveHookManager):
         return
@@ -68,9 +68,11 @@ def pre_lock_signal(
         )
         fetch_hashes(provider.repository, mapping)
     current_candidates = project.locked_repository.all_candidates
-    project_dependencies = chain.from_iterable(
-        project.get_dependencies(group)
-        for group in update_frame.frame.f_locals["groups"]
+    project_dependencies = list(
+        chain.from_iterable(
+            project.get_dependencies(group)
+            for group in update_frame.frame.f_locals["groups"]
+        ),
     )
     deps_to_update = [
         f"{name} {c.version} -> {mapping[name].version}"
@@ -116,7 +118,7 @@ def pre_lock_signal(
     )
     lock_frame.frame.f_globals.update(
         {
-            "resolve": lambda *args: (mapping, dependencies),
+            "resolve": lambda *args: (mapping, collected_dependencies),
             "fetch_hashes": lambda *args: None,
         },
     )
