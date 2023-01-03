@@ -1,0 +1,10 @@
+*.egg-info
+*.py[co]
+/.coverage
+/.tox
+/dist
+build/
+.vscode/
+.idea/
+.mypy_cache/
+.ruff_cache/
