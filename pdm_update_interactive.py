@@ -3,8 +3,8 @@ from __future__ import annotations
 import argparse
 import ctypes
 import inspect
-from collections.abc import Iterable
 from itertools import chain
+from typing import TYPE_CHECKING
 
 from pdm.cli.actions import do_update
 from pdm.cli.commands.update import Command as BaseCommand
@@ -15,17 +15,11 @@ from pdm.models.requirements import Requirement
 from pdm.project.core import Project
 from pdm.resolver.core import resolve
 from pdm.signals import pre_lock
-from resolvelib import Resolver
-from simple_term_menu import TerminalMenu
+from questionary import checkbox, Choice
 
-
-def prompt(
-    options: Iterable[str],
-    title: str | Iterable[str] | None = None,
-) -> list[str]:
-    terminal_menu = TerminalMenu(options, title=title, multi_select=True)
-    menu_entry = terminal_menu.show()
-    return [v for i, v in enumerate(options) if i in menu_entry] if menu_entry else []
+if TYPE_CHECKING:
+    from pdm.models.candidates import Candidate
+    from resolvelib import Resolver
 
 
 class InteractiveHookManager(HookManager):
@@ -59,7 +53,11 @@ def pre_lock_signal(
             provider.tracked_names,
             lock_frame.frame.f_locals["spin"],
         )
-        resolver: Resolver = project.core.resolver_class(provider, reporter)
+        resolver: Resolver[
+            Requirement,
+            dict[str, Candidate],
+            dict[tuple[str, str | None], list[Requirement]],
+        ] = project.core.resolver_class(provider, reporter)
         mapping, dependencies = resolve(
             resolver,
             requirements,
@@ -75,19 +73,18 @@ def pre_lock_signal(
         ),
     )
     deps_to_update = [
-        f"{name} {c.version} -> {mapping[name].version}"
+        Choice(f"{name} {c.version} -> {mapping[name].version}", name)
         for name, c in current_candidates.items()
         if c.version != mapping[name].version and name in project_dependencies
     ]
     prompt_deps = (
-        prompt(deps_to_update, "Choose dependencies to update...")
+        set(checkbox("Choose dependencies to update...", choices=deps_to_update).ask())
         if deps_to_update
-        else []
+        else set()
     )
-    prompt_deps = [d.split()[0] for d in prompt_deps]
-    tracked_dependencies = [
+    tracked_dependencies = {
         n for n, v in current_candidates.items() if n in prompt_deps
-    ]
+    }
 
     requires = set()
     collected_dependencies = {}
@@ -135,7 +132,10 @@ class Command(BaseCommand):
             if options.default
             else [p for p in project.iter_groups() if p != "default"]
         )
-        selected_groups = prompt(project_groups, "Choose dependency groups...")
+        selected_groups = checkbox(
+            "Choose dependency groups...",
+            choices=project_groups,
+        ).ask()
         if not selected_groups:
             return
 
