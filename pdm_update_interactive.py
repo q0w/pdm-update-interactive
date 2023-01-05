@@ -73,7 +73,7 @@ def pre_lock_signal(
         ),
     )
     deps_to_update = [
-        Choice(f"{name} {c.version} -> {mapping[name].version}", name)
+        Choice(f"{name} {c.version} > {mapping[name].version}", name)
         for name, c in current_candidates.items()
         if c.version != mapping[name].version and name in project_dependencies
     ]
