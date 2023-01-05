@@ -66,7 +66,7 @@ def pre_lock_signal(
         )
         fetch_hashes(provider.repository, mapping)
     current_candidates = project.locked_repository.all_candidates
-    project_dependencies = list(
+    project_dependencies = set(
         chain.from_iterable(
             project.get_dependencies(group)
             for group in update_frame.frame.f_locals["groups"]
@@ -77,11 +77,12 @@ def pre_lock_signal(
         for name, c in current_candidates.items()
         if c.version != mapping[name].version and name in project_dependencies
     ]
-    prompt_deps = (
-        set(checkbox("Choose dependencies to update...", choices=deps_to_update).ask())
-        if deps_to_update
-        else set()
-    )
+    response = checkbox(
+        "Choose dependencies to update...",
+        choices=deps_to_update,
+    ).ask()
+    prompt_deps = set(response) if response else set()
+
     tracked_dependencies = {
         n for n, v in current_candidates.items() if n in prompt_deps
     }
