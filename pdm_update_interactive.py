@@ -10,15 +10,15 @@ from pdm.cli.actions import do_update
 from pdm.cli.commands.update import Command as BaseCommand
 from pdm.cli.hooks import HookManager
 from pdm.cli.utils import fetch_hashes
-from pdm.core import Core
-from pdm.models.requirements import Requirement
-from pdm.project.core import Project
 from pdm.resolver.core import resolve
 from pdm.signals import pre_lock
 from questionary import checkbox, Choice
 
 if TYPE_CHECKING:
+    from pdm.core import Core
     from pdm.models.candidates import Candidate
+    from pdm.models.requirements import Requirement
+    from pdm.project.core import Project
     from resolvelib import Resolver
 
 
